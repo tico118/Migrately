@@ -1,0 +1,174 @@
+using Sabio.Data.Providers;
+using System;
+using System.Collections.Generic;
+using System.Data.SqlClient;
+using System.Data;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Sabio.Models.Domain.Comments;
+using Sabio.Data;
+using Sabio.Services.Interfaces;
+using Sabio.Models.Requests.Comments;
+using Sabio.Models.Domain;
+using System.Xml.Linq;
+
+namespace Sabio.Services
+{
+    public class CommentService : ICommentService
+    {
+        IDataProvider _data = null;
+        public CommentService(IDataProvider data)
+        {
+            _data = data;
+        }
+        public List<Comment> GetByEntityId(int entityId, int entityTypeId)
+        {
+            List<Comment> comments = null;
+
+            string procName = "[dbo].[Comments_Select_ByEntityId]";
+
+            _data.ExecuteCmd(procName,
+                inputParamMapper: delegate (SqlParameterCollection paramCollection)
+                {
+                    paramCollection.AddWithValue("@EntityId", entityId);
+                    paramCollection.AddWithValue("@EntityTypeId", entityTypeId);
+                },
+                singleRecordMapper: delegate (IDataReader reader, short set)
+                {
+                    int startingIndex = 0;
+
+                    Comment comment = SingleCommentMapper(reader, ref startingIndex);
+
+                    if(comments == null)
+                    {
+                        comments = new List<Comment>();
+                    }
+                    comments.Add(comment);
+                }
+            );
+            return comments;
+        }
+
+        public List<Comment> GetNestedComments(int entityId, int entityTypeId)
+        {
+            List<Comment> comments = GetByEntityId(entityId, entityTypeId);
+            List<Comment> list = new List<Comment>();
+            Dictionary<int, Comment> _dictTopLevel = new Dictionary<int, Comment>();
+
+            if (comments != null)
+            {
+                foreach (Comment comment in comments)
+                {
+                    if (comment.ParentId == 0)
+                    {
+                        _dictTopLevel.Add(comment.Id, comment);
+                    }
+                    if (comment.ParentId != 0)
+                    {
+                        foreach (Comment comment1 in comments)
+                        {
+                            if (comment.Id == comment1.ParentId)
+                            {
+                                comment.Replies ??= new List<Comment>();
+                                comment.Replies.Add(comment1);
+                            }
+                        }
+                        if (_dictTopLevel.ContainsKey(comment.ParentId))
+                        {
+                            _dictTopLevel[comment.ParentId].Replies ??= new List<Comment>();
+                            _dictTopLevel[comment.ParentId].Replies.Add(comment);
+                        }
+                    }
+                }
+            }
+
+            list = _dictTopLevel.Select(item=>item.Value).ToList();
+            list.Reverse(); 
+            return list;
+        }
+
+    public int AddComment(CommentAddRequest model, int userId)
+        {
+            int id = 0;
+            string procName = "[dbo].[Comments_Insert]";
+
+            _data.ExecuteNonQuery(procName,
+                inputParamMapper: delegate (SqlParameterCollection col)
+                {
+                    AddCommonParams(model, col);
+                    col.AddWithValue("@CreatedBy", userId);
+
+                    SqlParameter idOut = new SqlParameter("@Id", SqlDbType.Int);
+                    idOut.Direction = ParameterDirection.Output;
+                    col.Add(idOut);
+                },
+                returnParameters: delegate (SqlParameterCollection returnCollection)
+                {
+                    object old = returnCollection["@Id"].Value;
+                    int.TryParse(old.ToString(), out id);
+                });
+            return id;
+        }
+
+        public void UpdateComment(CommentUpdateRequest model, int id)
+        {
+            string procName = "[dbo].[Comments_Update]";
+
+            _data.ExecuteNonQuery(procName,
+                inputParamMapper: delegate (SqlParameterCollection col)
+                {
+                    col.AddWithValue("@Subject", model.Subject);
+                    col.AddWithValue("@Text", model.Text);
+                    col.AddWithValue("@Id", id);
+                },
+                returnParameters: null);
+        }
+
+        public void DeleteComment(int id)
+        {
+            string procName = "[dbo].[Comments_Delete]";
+
+            _data.ExecuteNonQuery(procName,
+                inputParamMapper: delegate (SqlParameterCollection col)
+                {
+                    col.AddWithValue("@Id", id);
+                },
+                returnParameters: null);
+        }
+
+
+
+        private static Comment SingleCommentMapper(IDataReader reader, ref int startingIndex)
+        {
+            Comment comment = new Comment();
+
+            comment.Id = reader.GetSafeInt32(startingIndex++);
+            comment.Subject = reader.GetSafeString(startingIndex++);
+            comment.Text = reader.GetSafeString(startingIndex++);
+            comment.ParentId = reader.GetSafeInt32(startingIndex++);
+            comment.EntityType = new LookUp();
+            comment.EntityType.Id = reader.GetSafeInt32(startingIndex++);
+            comment.EntityType.Name = reader.GetSafeString(startingIndex++);
+            comment.EntityId = reader.GetSafeInt32(startingIndex++);
+            comment.DateCreated = reader.GetSafeDateTime(startingIndex++);
+            comment.DateModified = reader.GetSafeDateTime(startingIndex++);
+            comment.Author = new Author();
+            comment.Author.Id = reader.GetSafeInt32(startingIndex++);
+            comment.Author.FirstName = reader.GetSafeString(startingIndex++);
+            comment.Author.LastName = reader.GetSafeString(startingIndex++);
+            comment.Author.AvatarUrl = reader.GetSafeString(startingIndex++);
+            comment.IsDeleted = reader.GetSafeBool(startingIndex++);
+            return comment;
+        }
+
+        private static void AddCommonParams(CommentAddRequest model, SqlParameterCollection col)
+        {
+            col.AddWithValue("@Subject", model.Subject);
+            col.AddWithValue("@Text", model.Text);
+            col.AddWithValue("@ParentId", model.ParentId);
+            col.AddWithValue("@EntityTypeId", model.EntityTypeId);
+            col.AddWithValue("@EntityId", model.EntityId);
+        }
+    }
+}
