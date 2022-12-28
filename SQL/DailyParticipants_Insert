@@ -1,0 +1,47 @@
+
+ALTER PROC [dbo].[DailyParticipants_Insert]
+			@UserId int
+			,@DailyRoomName nvarchar(200)
+			,@Duration int
+			,@TimeJoined int
+			,@Id int OUTPUT
+
+AS
+
+/*
+	Declare	@UserId int = 1
+			,@DailyRoomName nvarchar(200) = '456987-abc-1234'
+			,@Duration int = 123
+			,@TimeJoined int = 12345678
+			,@Id int = 0
+
+	Execute dbo.DailyParticipants_Insert									
+								@UserId
+								,@DailyRoomName
+								,@Duration
+								,@TimeJoined
+								,@Id OUTPUT
+
+	SELECT *
+	FROM [dbo].[DailyParticipants]
+	Where Id = @Id
+*/
+
+BEGIN
+
+	INSERT INTO [dbo].[DailyParticipants]
+		([UserId]
+		,[DailyRoomName]
+		,[Duration]
+		,[TimeJoined])
+
+	VALUES
+		(@UserId
+		,@DailyRoomName
+		,@Duration
+		,@TimeJoined)
+
+	SET @Id = SCOPE_IDENTITY()
+END
+
+
