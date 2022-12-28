@@ -1,0 +1,27 @@
+.comments-container{
+	background-color: antiquewhite;
+	border-radius: 25px;
+}
+.comment-padding{
+	padding-top: 25px;
+}
+.reply-btn-margin-bottom{
+	margin-bottom: 15px;
+}
+.form-margin{
+	margin-left: 75px;
+}
+.comment-form-margin-bottom{
+	margin-bottom: 15px;
+}
+.comment-border{
+	border-bottom-style: solid;
+	border-width: 1px;
+	border-color: rgb (240, 243, 245);
+}
+.comment-text {
+	font-size: 16px;
+}
+.timestamp-text {
+	font-size: 12px;
+}
