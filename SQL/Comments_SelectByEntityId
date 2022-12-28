@@ -1,0 +1,50 @@
+
+
+ALTER PROC [dbo].[Comments_Select_ByEntityId]
+			@EntityId int
+			,@EntityTypeId int
+			
+
+/* ----TEST CODE----
+	
+	Declare @EntityId int = 1;
+	Declare @EntityTypeId int = 1;
+
+	Execute [dbo].[Comments_Select_ByEntityId]	@EntityId
+												,@EntityTypeId
+
+
+
+*/
+
+AS
+
+BEGIN
+
+	SELECT	c.[Id]
+			,c.[Subject]
+			,c.[Text]
+			,c.[ParentId]
+			,c.[EntityTypeId]
+			,et.[Name] AS EntityTypeName
+			,c.[EntityId]
+			,c.[DateCreated]
+			,c.[DateModified]
+			,c.[CreatedBy]
+			,u.FirstName
+			,u.LastName
+			,u.AvatarUrl
+			,c.[IsDeleted]
+	
+	FROM [dbo].[Comments] AS c INNER JOIN dbo.EntityTypes as et
+			ON c.EntityTypeId = et.Id
+			INNER JOIN dbo.Users AS u
+			ON c.CreatedBy = u.Id
+	WHERE	(EntityId = @EntityId)
+			AND
+			(EntityTypeId = @EntityTypeId)
+			AND
+			(IsDeleted = 0)	
+
+END
+
