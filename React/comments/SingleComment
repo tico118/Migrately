@@ -1,0 +1,372 @@
+import React, { useState } from "react";
+import PropTypes from "prop-types";
+import debug from "sabio-debug";
+import { Formik, Form, Field, ErrorMessage } from "formik";
+import * as Icon from "react-bootstrap-icons";
+import { OverlayTrigger, Tooltip } from "react-bootstrap";
+import "./commentstyles.css";
+import { formatDateTime } from "../../helper/dateFormater";
+import { commentSchema } from "../../schemas/commentSchema";
+
+const SingleComment = (props) => {
+  const comment = props.aComment;
+  const _logger = debug.extend("SingleComment");
+
+  const [pageData, setPageData] = useState({
+    showReplyForm: false,
+    showUpdateForm: false,
+    addReplyPayload: {
+      entityTypeId: 0,
+      entityId: 0,
+      text: "",
+      parentId: 0,
+      subject: "",
+    },
+    updateCommentPayload: {
+      id: 0,
+      entityTypeId: 0,
+      entityId: 0,
+      text: "",
+      parentId: 0,
+      subject: "",
+    },
+    hover: false,
+    showReplies: false,
+    repliesParentId: null,
+  });
+
+  const onLocalReplyClicked = (e) => {
+    e.preventDefault();
+    _logger(comment.id, "From Local Reply Clicked");
+    setPageData((prevState) => {
+      const pd = { ...prevState };
+      pd.showReplyForm = !pd.showReplyForm;
+      pd.addReplyPayload.parentId = comment.id;
+      pd.addReplyPayload.entityId = props.entity.id;
+      pd.addReplyPayload.entityTypeId = props.entity.typeId;
+      return pd;
+    });
+  };
+
+  const onPostReplyClick = (values, { resetForm }) => {
+    _logger(values, "From Post Reply Click");
+    props.onPostReplyClick(values);
+    resetForm();
+    setPageData((prevState) => {
+      const pd = { ...prevState };
+      pd.showReplyForm = !pd.showReplyForm;
+      pd.showReplies = !pd.showReplies;
+      return pd;
+    });
+  };
+
+  const onLocalUpdateClicked = (e) => {
+    e.preventDefault();
+    _logger(comment.text, "From Local Update Clicked");
+    setPageData((prevState) => {
+      const pd = { ...prevState };
+      pd.showUpdateForm = !pd.showUpdateForm;
+      pd.updateCommentPayload.id = comment.id;
+      pd.updateCommentPayload.text = comment.text;
+      pd.updateCommentPayload.subject = comment.subject;
+      pd.updateCommentPayload.entityId = props.entity.typeId;
+      pd.updateCommentPayload.entityTypeId = props.entity.id;
+      return pd;
+    });
+  };
+
+  const onUpdateClick = (values, { resetForm }) => {
+    _logger(values, "From Update Click");
+    props.onUpdateClick(values);
+    resetForm();
+    setPageData((prevState) => {
+      const pd = { ...prevState };
+      pd.showUpdateForm = !pd.showUpdateForm;
+      return pd;
+    });
+  };
+
+  const mapReply = (reply) => {
+    return (
+      <SingleComment
+        aComment={reply}
+        key={reply.id}
+        entity={props.entity}
+        user={props.user}
+        onPostReplyClick={props.onPostReplyClick}
+        onDeleteClick={props.onDeleteClick}
+        onUpdateClick={props.onUpdateClick}
+      />
+    );
+  };
+
+  const onLocalDeleteClicked = (e) => {
+    e.preventDefault();
+    props.onDeleteClick(comment, e);
+  };
+
+  const setHover = () => {
+    setPageData((prevState) => {
+      const pd = { ...prevState };
+      pd.hover = !pd.hover;
+      return pd;
+    });
+  };
+
+  const setShowReplies = () => {
+    if (pageData.showReplies === false) {
+      setPageData((prevState) => {
+        const pd = { ...prevState };
+        pd.repliesParentId = comment.id;
+        pd.showReplies = !pd.showReplies;
+        return pd;
+      });
+    } else {
+      setPageData((prevState) => {
+        const pd = { ...prevState };
+        pd.repliesParentId = null;
+        pd.showReplies = !pd.showReplies;
+        return pd;
+      });
+    }
+  };
+
+  const timePosted = (dateCreated) => {
+    const utcDate = `${dateCreated}Z`;
+    const date = formatDateTime(utcDate);
+    return date;
+  };
+
+  const setPadding = () => (comment.parentId > 0 ? "85px" : "0px");
+
+  return (
+    <React.Fragment>
+      <div
+        className="border-top comment-padding"
+        style={{ paddingLeft: setPadding() }}
+      >
+        <div className="m-2">
+          <div
+            className="row reply-btn-margin-bottom"
+            onMouseEnter={setHover}
+            onMouseLeave={setHover}
+          >
+            <div className="col-sm-2 col-md-2 col-lg-1">
+              <img
+                src={comment.author.avatarUrl}
+                alt="User Avatar"
+                className="rounded-circle avatar-lg"
+              />
+            </div>
+            <div className="col-sm-8 col-md-8 col-lg-9">
+              <div className="row">
+                <div className="col-sm-4 col-md-4 col-lg-3">
+                  <h4>
+                    {comment.author.firstName} {comment.author.lastName}
+                  </h4>
+                </div>
+                <div className="col-sm-5 col-md-6 col-lg-4 timestamp-text">
+                  <p>{timePosted(comment.dateCreated)}</p>
+                </div>
+              </div>
+              <div className="row">{""}</div>
+              <div className="row">
+                <p className="mt-2 comment-text">{comment.text}</p>
+              </div>
+              <div className="row">
+                <div className="col">
+                  <button
+                    onClick={onLocalReplyClicked}
+                    className="btn btn-outline-white btn-sm"
+                  >
+                    Reply <Icon.Reply color="royalblue" size={13} />
+                  </button>
+                  <span className="text-muted"> </span>
+                  {comment.replies !== null && (
+                    <button
+                      className="btn btn-outline-white btn-sm"
+                      onClick={setShowReplies}
+                    >
+                      {comment.replies.length}{" "}
+                      {comment.replies.length === 1 ? "Reply" : "Replies"}
+                      {pageData.showReplies === false ? (
+                        <Icon.CaretDown color="gray" size={13} />
+                      ) : (
+                        <Icon.CaretUp color="gray" size={13} />
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="col-sm-2 col-md-2 col-lg-2">
+              {props.user.id === comment.author.id &&
+                pageData.hover === true && (
+                  <OverlayTrigger
+                    key={`${comment.id}_Update`}
+                    placement="top"
+                    overlay={
+                      <Tooltip id={`tooltip-top`}>Update Comment</Tooltip>
+                    }
+                  >
+                    <Icon.Pencil
+                      onClick={onLocalUpdateClicked}
+                      color="Orange"
+                      size={20}
+                    />
+                  </OverlayTrigger>
+                )}{" "}
+              {props.user.id === comment.author.id && pageData.hover === true && (
+                <OverlayTrigger
+                  key={`${comment.id}_Delete`}
+                  placement="top"
+                  overlay={<Tooltip id={`tooltip-top`}>Delete Comment</Tooltip>}
+                >
+                  <Icon.Trash
+                    onClick={onLocalDeleteClicked}
+                    color="red"
+                    size={20}
+                  />
+                </OverlayTrigger>
+              )}
+            </div>
+          </div>
+          <div className="row">
+            {pageData.showReplyForm && (
+              <Formik
+                enableReinitialize={true}
+                initialValues={pageData.addReplyPayload}
+                onSubmit={onPostReplyClick}
+                validationSchema={commentSchema}
+              >
+                <Form>
+                  <div className="row form-margin">
+                    <div className="col-md-8">
+                      <div className="form-group">
+                        <Field
+                          type="text"
+                          className="form-control"
+                          id="textInput"
+                          name="text"
+                          placeholder="Enter Your Reply"
+                        />
+                        <ErrorMessage
+                          name="text"
+                          component="div"
+                          className="has-error"
+                        />
+                      </div>
+                    </div>
+                    <div className="col-md-4">
+                      <button type="submit" className="btn btn-primary ">
+                        Post Reply
+                      </button>
+                    </div>
+                  </div>
+                </Form>
+              </Formik>
+            )}
+            {pageData.showUpdateForm && (
+              <Formik
+                enableReinitialize={true}
+                initialValues={pageData.updateCommentPayload}
+                onSubmit={onUpdateClick}
+                validationSchema={commentSchema}
+              >
+                <Form>
+                  <div className="row form-margin">
+                    <div className="col-md-8">
+                      <div className="form-group">
+                        <Field
+                          type="text"
+                          className="form-control"
+                          id="textInput"
+                          name="text"
+                          placeholder="Enter Your Reply"
+                        />
+                        <ErrorMessage
+                          name="text"
+                          component="div"
+                          className="has-error"
+                        />
+                      </div>
+                    </div>
+                    <div className="col-md-4">
+                      <button type="submit" className="btn btn-warning ">
+                        Update
+                      </button>
+                    </div>
+                  </div>
+                </Form>
+              </Formik>
+            )}
+          </div>
+        </div>
+        {comment.replies &&
+          pageData.showReplies === true &&
+          comment.replies.map(mapReply)}
+      </div>
+    </React.Fragment>
+  );
+};
+
+SingleComment.propTypes = {
+  aComment: PropTypes.shape({
+    id: PropTypes.number,
+    parentId: PropTypes.number,
+    subject: PropTypes.string,
+    text: PropTypes.string,
+    author: PropTypes.shape({
+      id: PropTypes.number,
+      firstName: PropTypes.string,
+      lastName: PropTypes.string,
+      avatarUrl: PropTypes.string,
+    }).isRequired,
+    entityId: PropTypes.number,
+    entityType: PropTypes.shape({
+      id: PropTypes.number,
+      name: PropTypes.string,
+    }).isRequired,
+    dateCreated: PropTypes.string,
+    dateModified: PropTypes.string,
+    isDeleted: PropTypes.bool,
+    replies: PropTypes.arrayOf(
+      PropTypes.shape({
+        id: PropTypes.number,
+        parentId: PropTypes.number,
+        subject: PropTypes.string,
+        text: PropTypes.string,
+        author: PropTypes.shape({
+          id: PropTypes.number,
+          firstName: PropTypes.string,
+          lastName: PropTypes.string,
+          avatarUrl: PropTypes.string,
+        }).isRequired,
+        entityId: PropTypes.number.isRequired,
+        entityType: PropTypes.shape({
+          id: PropTypes.number,
+          name: PropTypes.string,
+        }).isRequired,
+        dateCreated: PropTypes.string,
+        dateModified: PropTypes.string,
+        isDeleted: PropTypes.bool,
+      }).isRequired
+    ),
+  }).isRequired,
+  onReplyClick: PropTypes.func,
+  onReplyClicked: PropTypes.func,
+  entity: PropTypes.shape({
+    id: PropTypes.number,
+    typeId: PropTypes.number,
+  }).isRequired,
+  user: PropTypes.shape({
+    id: PropTypes.number,
+    avatarUrl: PropTypes.string,
+  }).isRequired,
+  onDeleteClick: PropTypes.func,
+  onPostReplyClick: PropTypes.func,
+  onUpdateClick: PropTypes.func,
+  commentSchema: PropTypes.func,
+};
+
+export default SingleComment;
