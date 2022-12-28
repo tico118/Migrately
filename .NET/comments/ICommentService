@@ -1,0 +1,15 @@
+using Sabio.Models.Domain.Comments;
+using Sabio.Models.Requests.Comments;
+using System.Collections.Generic;
+
+namespace Sabio.Services.Interfaces
+{
+    public interface ICommentService
+    {
+        List<Comment> GetByEntityId(int entityId, int entityTypeId);
+        List<Comment> GetNestedComments(int entityId, int entityTypeId);
+        int AddComment(CommentAddRequest model, int userId);
+        void UpdateComment(CommentUpdateRequest model, int id);
+        void DeleteComment(int id);
+    }
+}
