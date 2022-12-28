@@ -1,0 +1,39 @@
+import React from "react";
+import Comments from "../comments/Comments";
+
+const ParentComponent = () => {
+  // This Parent Component is responsible for sending
+  // entityTypeId,
+  // entityId,
+  // userId,
+  // and user avatarUrl
+  // as props to the Comments Component.
+
+  // "1" is hard coded for entityTypeId and entityId for testing purposes
+  // but your actual component (a blog or a forum) will have its own typeId and id
+  // that you need to pass to Comments as props.
+
+  // "8" is hard coded for userId for testing purposes
+  // your actual component will have to get the currently logged in user
+  // and pass its Id and avatarUrl through props to Comments.
+
+  const entity = {
+    typeId: 1,
+    id: 1,
+  };
+
+  const user = {
+    id: 8,
+    avatarUrl: "https://tinyurl.com/mr2zsz4k",
+  };
+
+  return (
+    <div style={{ backgroundColor: "black" }}>
+      <div className="container">
+        <Comments entity={entity} user={user} />
+      </div>
+    </div>
+  );
+};
+
+export default ParentComponent;
