@@ -1,0 +1,52 @@
+
+ALTER PROC [dbo].[DailyMeetings_SelectAllPaginated]
+			@PageIndex int
+			,@PageSize int
+
+AS
+
+/*
+
+Declare	@PageIndex int = 0
+        ,@PageSize int = 5
+
+Execute dbo.DailyMeetings_SelectAllPaginated	@PageIndex
+												,@PageSize
+
+*/
+
+BEGIN
+
+	DECLARE @offSet int = @PageIndex * @PageSize
+
+	SELECT	dm.[Id]
+			,dm.[HostId]
+			,us.[FirstName] AS HostFirstName
+			,us.[LastName] AS HostLastName
+			,dm.[DailyRoomName]
+			,dm.[Duration]
+			,dm.[StartTime]
+			,Participants = (
+								SELECT	u.[Id]
+										,u.[FirstName]
+										,u.[LastName]
+										,dp.[DailyRoomName]
+										,dp.[Duration]
+										,dp.[TimeJoined]
+										
+								FROM	[dbo].[DailyParticipants] AS dp INNER JOIN [dbo].[Users] AS u
+										ON dp.[UserId] = u.[Id]
+								WHERE dp.[DailyRoomName] = dm.[DailyRoomName]
+								FOR JSON PATH
+								)
+			,TotalCount = COUNT(1) OVER()
+
+	FROM [dbo].[DailyMeetings] AS dm INNER JOIN [dbo].[Users] AS us
+			ON dm.[HostId] = us.[Id]
+	ORDER BY Id DESC
+
+	OFFSET @offSet Rows
+	Fetch Next @PageSize Rows ONLY
+
+END
+
