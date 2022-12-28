@@ -1,0 +1,63 @@
+
+
+ALTER PROC [dbo].[Comments_Insert]
+		@Subject nvarchar(50) = NULL
+		,@Text nvarchar(3000)
+		,@ParentId int = 0
+		,@EntityTypeId int
+		,@EntityId int
+		,@CreatedBy int
+		,@Id int OUTPUT
+			
+
+/* ----TEST CODE----
+	
+	Declare @Id int = 0;
+
+	Declare	@Subject nvarchar(50) = 'Reply to Top Level Comment'
+			,@Text nvarchar(3000) = 'Reply 2'
+			,@ParentId int = 2
+			,@EntityTypeId int = 1
+			,@EntityId int = 1
+			,@CreatedBy int = 8
+
+	Execute [dbo].[Comments_Insert]	
+							@Subject
+							,@Text
+							,@ParentId
+							,@EntityTypeId
+							,@EntityId
+							,@CreatedBy
+							,@Id OUTPUT
+
+
+		SELECT *
+		FROM [dbo].[Comments]
+		WHERE Id = @Id
+
+*/
+
+AS
+
+BEGIN
+
+	INSERT INTO [dbo].[Comments]
+           ([Subject]
+           ,[Text]
+           ,[ParentId]
+           ,[EntityTypeId]
+           ,[EntityId]
+           ,[CreatedBy])
+
+	VALUES
+           (@Subject
+           ,@Text
+           ,@ParentId
+           ,@EntityTypeId
+           ,@EntityId
+           ,@CreatedBy)
+
+	SET @Id = SCOPE_IDENTITY()
+
+END
+
