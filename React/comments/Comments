@@ -1,0 +1,250 @@
+import React, { useState, useEffect, useCallback } from "react";
+import * as commentsService from "../../services/comments/commentsService";
+import debug from "sabio-debug";
+import SingleComment from "../comments/SingleComment";
+import PropTypes from "prop-types";
+import { Formik, Form, Field, ErrorMessage } from "formik";
+import { Card, ListGroup } from "react-bootstrap";
+import Swal from "sweetalert2";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { commentSchema } from "../../schemas/commentSchema";
+
+const Comments = (props) => {
+  const [pageData, setPageData] = useState({
+    comments: [],
+    commentsComponents: [],
+    addCommentPayload: {
+      entityTypeId: props.entity.typeId,
+      entityId: props.entity.id,
+      text: "",
+      parentId: 0,
+      subject: "",
+    },
+  });
+
+  const _logger = debug.extend("Comments");
+
+  useEffect(() => {
+    commentsService
+      .getCommentsByEntityId(props.entity.id, props.entity.typeId)
+      .then(onGetCommentsByEntityIdSuccess)
+      .catch(onGetCommentsByEntityIdError);
+  }, []);
+
+  const onGetCommentsByEntityIdSuccess = (response) => {
+    _logger(response, "From onGetCommentsByEntityIdSuccess");
+    setPageData((prevState) => {
+      const pd = { ...prevState };
+      pd.comments = response.data.items;
+      pd.commentsComponents = response.data.items.map(mapComment);
+      return pd;
+    });
+  };
+
+  const onGetCommentsByEntityIdError = (error) => {
+    _logger(error, "From onGetCommentsByEntityIdError");
+    toast.error("Error Loading Comments");
+  };
+
+  const onUpdateClick = useCallback((values) => {
+    Swal.fire({
+      title: "Are you sure?",
+      text: "You are about to Update your comment.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, update it!",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        commentsService
+          .updateComment(values.id, values)
+          .then(onUpdateCommentSuccess)
+          .catch(onUpdateCommentError);
+      }
+    });
+  }, []);
+
+  const onUpdateCommentSuccess = (response) => {
+    _logger(response, "From Update Comment Success");
+
+    Swal.fire("Updated!", "Your comment has been updated.", "success");
+
+    commentsService
+      .getCommentsByEntityId(props.entity.id, props.entity.typeId)
+      .then(onGetCommentsByEntityIdSuccess)
+      .catch(onGetCommentsByEntityIdError);
+  };
+
+  const onUpdateCommentError = (error) => {
+    _logger(error, "From Update Comment Error");
+
+    Swal.fire("Error!", "There was a problem updating your comment.", "error");
+  };
+
+  const onPostCommentClick = (values, { resetForm }) => {
+    _logger(values, "From Post Comment Click");
+    resetForm();
+    commentsService
+      .addComment(values)
+      .then(onAddCommentSuccess)
+      .catch(onAddCommentError);
+  };
+
+  const onAddCommentSuccess = (response) => {
+    _logger(response, "From Add Comment Success");
+    toast.success("Comment Posted");
+    commentsService
+      .getCommentsByEntityId(props.entity.id, props.entity.typeId)
+      .then(onGetCommentsByEntityIdSuccess)
+      .catch(onGetCommentsByEntityIdError);
+  };
+
+  const onAddCommentError = (error) => {
+    _logger(error, "From Add Comment Error");
+    toast.error("Error Posting Comment");
+  };
+
+  const mapComment = (comment) => {
+    _logger(comment, "From Comments mapComment");
+    return (
+      <SingleComment
+        aComment={comment}
+        key={comment.id}
+        entity={props.entity}
+        user={props.user}
+        onDeleteClick={onDeleteClick}
+        onPostReplyClick={onPostReplyClick}
+        onUpdateClick={onUpdateClick}
+      />
+    );
+  };
+
+  const onPostReplyClick = useCallback((values) => {
+    commentsService
+      .addComment(values)
+      .then(onAddReplySuccess)
+      .catch(onAddReplyError);
+  }, []);
+
+  const onAddReplySuccess = (response) => {
+    _logger(response, "From Add Reply Success");
+    toast.success("Reply Posted");
+    commentsService
+      .getCommentsByEntityId(props.entity.id, props.entity.typeId)
+      .then(onGetCommentsByEntityIdSuccess)
+      .catch(onGetCommentsByEntityIdError);
+  };
+
+  const onAddReplyError = (error) => {
+    _logger(error, "From Add Comment Error");
+    toast.error("Error Posting Reply");
+  };
+
+  const onDeleteClick = useCallback((comment) => {
+    Swal.fire({
+      title: "Are you sure?",
+      text: "Deleting a comment is permanent!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, delete it!",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        commentsService
+          .deleteComment(comment.id)
+          .then(onDeleteCommentSuccess)
+          .catch(onDeleteCommentError);
+      }
+    });
+  }, []);
+
+  const onDeleteCommentSuccess = (response) => {
+    _logger(response, "From Delete Success");
+
+    Swal.fire("Deleted!", "Your comment has been deleted.", "success");
+
+    commentsService
+      .getCommentsByEntityId(props.entity.id, props.entity.typeId)
+      .then(onGetCommentsByEntityIdSuccess)
+      .catch(onGetCommentsByEntityIdError);
+  };
+
+  const onDeleteCommentError = (error) => {
+    _logger(error, "From Delete Comment Error");
+
+    Swal.fire("Error!", "There was a problem deleting your comment.", "error");
+  };
+
+  return (
+    <React.Fragment>
+      <Card className="border-0">
+        <Card.Header className="d-lg-flex align-items-center justify-content-between">
+          <div className="mb-3 mb-lg-0">
+            <h1 className="mb-0">Comments</h1>
+          </div>
+        </Card.Header>
+        <Card.Body>
+          <Formik
+            enableReinitialize={true}
+            initialValues={pageData.addCommentPayload}
+            onSubmit={onPostCommentClick}
+            validationSchema={commentSchema}
+          >
+            <Form>
+              <div className="row comment-form-margin-bottom">
+                <div className="col-sm-2 col-md-2 col-lg-1">
+                  <img
+                    src={props.user.avatarUrl}
+                    alt="User Avatar"
+                    style={{ width: "55px", height: "55px" }}
+                    className="rounded-circle"
+                  />
+                </div>
+                <div className="col-sm-5 col-md-6 col-lg-8">
+                  <div className="form-group">
+                    <Field
+                      type="text"
+                      className="form-control"
+                      id="textInput"
+                      name="text"
+                      placeholder="Join the Discussion"
+                    />
+                    <ErrorMessage
+                      name="text"
+                      component="div"
+                      className="has-error"
+                    />
+                  </div>
+                </div>
+                <div className="col-sm-5 col-md-4 col-lg-3">
+                  <button type="submit" className="btn btn-primary ">
+                    Post Comment
+                  </button>
+                </div>
+              </div>
+            </Form>
+          </Formik>
+
+          <ListGroup variant="flush">{pageData.commentsComponents}</ListGroup>
+        </Card.Body>
+        <ToastContainer />
+      </Card>
+    </React.Fragment>
+  );
+};
+
+Comments.propTypes = {
+  entity: PropTypes.shape({
+    id: PropTypes.number,
+    typeId: PropTypes.number,
+  }).isRequired,
+  user: PropTypes.shape({
+    id: PropTypes.number,
+    avatarUrl: PropTypes.string,
+  }).isRequired,
+};
+
+export default Comments;
