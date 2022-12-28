@@ -1,0 +1,44 @@
+
+
+ALTER PROC [dbo].[Comments_Update]
+		@Subject nvarchar(50) = NULL
+		,@Text nvarchar(3000)
+		,@Id int
+			
+
+/* ----TEST CODE----
+	
+	Declare @Id int = 6;
+
+	Declare	@Subject nvarchar(50) = 'Reply to Reply'
+			,@Text nvarchar(3000) = 'Reply 1'
+
+	SELECT *
+	FROM [dbo].[Comments]
+	WHERE Id = @Id
+
+	Execute [dbo].[Comments_Update]	
+							@Subject
+							,@Text
+							,@Id
+
+	SELECT *
+	FROM [dbo].[Comments]
+	WHERE Id = @Id
+
+*/
+
+AS
+
+BEGIN
+
+	DECLARE @DateNow datetime2 = getutcdate();
+
+	UPDATE [dbo].[Comments]
+		SET [Subject] = @Subject
+			,[Text] = @Text
+			,[DateModified] = @DateNow
+		WHERE Id = @Id
+
+END
+
