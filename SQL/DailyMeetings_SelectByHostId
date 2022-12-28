@@ -1,0 +1,41 @@
+
+ALTER PROC [dbo].[DailyMeetings_SelectByHostId]
+				@HostId int
+
+AS
+
+/*
+
+Declare @HostId int = 77;
+Execute dbo.DailyMeetings_SelectByHostId @HostId
+
+*/
+
+BEGIN
+
+	SELECT	dm.[Id]
+			,dm.[HostId]
+			,us.[FirstName] AS HostFirstName
+			,us.[LastName] AS HostLastName
+			,dm.[DailyRoomName]
+			,dm.[Duration]
+			,dm.[StartTime]
+			,Participants = (
+								SELECT	u.[Id]
+										,u.[FirstName]
+										,u.[LastName]
+										,dp.[DailyRoomName]
+										,dp.[Duration]
+										,dp.[TimeJoined]
+										
+								FROM	[dbo].[DailyParticipants] AS dp INNER JOIN [dbo].[Users] AS u
+										ON dp.[UserId] = u.[Id]
+								WHERE dp.[DailyRoomName] = dm.[DailyRoomName]
+								FOR JSON PATH
+								)
+	FROM [dbo].[DailyMeetings] AS dm INNER JOIN [dbo].[Users] AS us
+			ON dm.[HostId] = us.[Id]
+	WHERE @HostId = dm.[HostId]
+
+END
+
