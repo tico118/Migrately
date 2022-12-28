@@ -1,0 +1,68 @@
+
+ALTER PROC [dbo].[DailyMeetings_Insert]
+			@HostId int
+			,@DailyRoomName nvarchar(128)
+			,@Duration int
+			,@StartTime int
+			,@Id int OUTPUT
+
+AS
+
+/*
+
+
+	Declare @HostId int = 23
+			,@DailyRoomName nvarchar(200) = 'dfjsdjkcvnadoj2324345'
+			,@Duration int = 123
+			,@StartTime int = 12365454
+			,@Id int = 0
+
+	Execute dbo.DailyMeetings_Insert									
+									@HostId 
+									,@DailyRoomName 
+									,@Duration 
+									,@StartTime
+									,@Id OUTPUT
+
+		SELECT *
+		FROM [dbo].[DailyMeetings]
+		Where Id = @Id
+
+
+*/
+
+BEGIN
+
+---------INSERT INTO DAILY MEETINGS TABLE---------
+
+		INSERT INTO [dbo].[DailyMeetings]
+			   ([HostId]
+			   ,[DailyRoomName]
+			   ,[Duration]
+			   ,[StartTime])
+
+		VALUES
+			   (@HostId
+			   ,@DailyRoomName
+			   ,@Duration
+			   ,@StartTime)
+
+		SET @Id = SCOPE_IDENTITY()
+
+------INSERT HOST INTO PARTICIPANT TABLE-----
+
+		INSERT INTO [dbo].[DailyParticipants]
+				([UserId]
+				,[DailyRoomName]
+				,[Duration]
+				,[TimeJoined])
+
+		VALUES
+				(@HostId
+				,@DailyRoomName
+				,@Duration
+				,@StartTime)
+
+
+END
+
